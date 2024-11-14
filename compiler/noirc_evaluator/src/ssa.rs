@@ -91,7 +91,7 @@ pub(crate) fn optimize_into_acir(
     let ssa_gen_span_guard = ssa_gen_span.enter();
 
     let mut ssa = SsaBuilder::new(
-        program,
+        program.clone(),
         options.enable_ssa_logging,
         options.force_brillig_output,
         options.print_codegen_timings,
@@ -149,6 +149,7 @@ pub(crate) fn optimize_into_acir(
             options.print_codegen_timings,
             || ssa.check_for_missing_brillig_constrains(),
         ));
+        println!("{:?}", program.functions.iter().map(|f| f.name.as_str()).collect::<Vec<_>>());
     };
 
     drop(ssa_gen_span_guard);
