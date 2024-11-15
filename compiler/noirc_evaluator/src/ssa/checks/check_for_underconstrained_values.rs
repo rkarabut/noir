@@ -97,6 +97,7 @@ struct DependencyContext {
     constrained_values: Vec<Vec<ValueId>>,
     // Map of brillig call ids to sets of their arguments and results
     brillig_values: HashMap<InstructionId, (HashSet<ValueId>, HashSet<ValueId>)>,
+    brillig_names: HashMap<InstructionId, String>,
 }
 
 impl DependencyContext {
@@ -215,6 +216,10 @@ impl DependencyContext {
                                         HashSet::from_iter(results),
                                     ),
                                 );
+                                self.brillig_names.insert(
+                                    *instruction,
+                                    all_functions[&callee].name().into()
+                                );
                             }
                             RuntimeType::Acir(..) => {
                                 // Record all the function arguments as parents of the results
@@ -312,6 +317,13 @@ impl DependencyContext {
         let unchecked_calls =
             self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
 
+        let unchecked_names: Vec<_> = unchecked_calls.map(|brillig_call| {
+            self.brillig_names.get(brillig_call)
+        }).collect();
+        
+        let unchecked_calls =
+            self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
+
         let warnings: Vec<SsaReport> = unchecked_calls
             .map(|brillig_call| {
                 SsaReport::Bug(InternalBug::UncheckedBrilligCall {
@@ -321,7 +333,7 @@ impl DependencyContext {
             .collect();
 
         if !warnings.is_empty() {
-            println!("function {} generated warnings for {:?}", function, unchecked)
+            println!("function {} generated warnings for calls {:?}: {:?}", function, unchecked_names, unchecked)
         }
 
         trace!("making following reports for function {}: {:?}", function.name(), warnings);
