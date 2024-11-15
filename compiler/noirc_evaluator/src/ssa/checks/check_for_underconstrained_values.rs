@@ -272,8 +272,7 @@ impl DependencyContext {
 
         let mut covered_brillig_calls: HashSet<InstructionId> = HashSet::new();
 
-        // reverse order of constrains to check the ones with fewest ancestors first
-        for constrained_values in self.constrained_values.iter().rev() {
+        for constrained_values in &self.constrained_values {
             let constrain_ancestors: HashSet<_> =
                 constrained_values.iter().flat_map(|v| self.collect_ancestors(*v)).collect();
             trace!("checking constrain involving values {:?}", constrain_ancestors);
@@ -306,6 +305,13 @@ impl DependencyContext {
         let unchecked_calls =
             self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
 
+        let unchecked: Vec<_> = unchecked_calls.map(|brillig_call| {
+            self.brillig_values.get(brillig_call)
+        }).collect();
+        
+        let unchecked_calls =
+            self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
+
         let warnings: Vec<SsaReport> = unchecked_calls
             .map(|brillig_call| {
                 SsaReport::Bug(InternalBug::UncheckedBrilligCall {
@@ -315,7 +321,7 @@ impl DependencyContext {
             .collect();
 
         if !warnings.is_empty() {
-            println!("function {} generated warnings", function)
+            println!("function {} generated warnings for {:?}", function, unchecked)
         }
 
         trace!("making following reports for function {}: {:?}", function.name(), warnings);
