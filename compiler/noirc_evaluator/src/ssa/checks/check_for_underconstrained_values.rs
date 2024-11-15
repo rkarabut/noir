@@ -311,8 +311,8 @@ impl DependencyContext {
             })
             .collect();
 
-        if !warnings.is_empty() {
-            println!("function {} generated warnings: {:?}", function, warnings)
+        if function.name().contains("decompose") && !warnings.is_empty() {
+            println!("function {} generated warnings", function)
         }
 
         trace!("making following reports for function {}: {:?}", function.name(), warnings);
