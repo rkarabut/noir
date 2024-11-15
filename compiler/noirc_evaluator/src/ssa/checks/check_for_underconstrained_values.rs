@@ -311,6 +311,10 @@ impl DependencyContext {
             })
             .collect();
 
+        if !warnings.is_empty() {
+            println!("function {:?} generated warnings: {:?}", function, warnings)
+        }
+
         trace!("making following reports for function {}: {:?}", function.name(), warnings);
         warnings
     }
