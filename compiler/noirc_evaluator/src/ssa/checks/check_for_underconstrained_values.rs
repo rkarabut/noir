@@ -314,7 +314,7 @@ impl DependencyContext {
             })
             .collect();
 
-        if function.name().contains("decompose") && !warnings.is_empty() {
+        if !warnings.is_empty() {
             println!("function {} generated warnings", function)
         }
 
