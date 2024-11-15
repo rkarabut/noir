@@ -152,7 +152,9 @@ impl DependencyContext {
                     // Remember the value stored at address as parent for the results
                     if let Some(value_id) = self.memory_slots.get(address) {
                         for result in results {
-                            self.value_parents.entry(result).or_default()
+                            self.value_parents
+                                .entry(result)
+                                .or_default()
                                 .push(function.dfg.resolve(*value_id));
                         }
                     } else {
@@ -164,15 +166,20 @@ impl DependencyContext {
                 // involved in brillig calls
                 Instruction::Constrain(value_id1, value_id2, _) => {
                     self.constrained_values.push(vec![
-                        function.dfg.resolve(*value_id1), 
-                        function.dfg.resolve(*value_id2)]);
+                        function.dfg.resolve(*value_id1),
+                        function.dfg.resolve(*value_id2),
+                    ]);
                 }
                 // Consider range check to also be constraining
                 Instruction::RangeCheck { value, .. } => {
                     self.constrained_values.push(vec![function.dfg.resolve(*value)]);
                 }
                 Instruction::Call { func: func_id, arguments } => {
-                    let arguments: Vec<_> = arguments.iter().filter(|v| function.dfg.get_numeric_constant(**v).is_none()).copied().collect();
+                    let arguments: Vec<_> = arguments
+                        .iter()
+                        .filter(|v| function.dfg.get_numeric_constant(**v).is_none())
+                        .copied()
+                        .collect();
                     match &function.dfg[*func_id] {
                         Value::Intrinsic(intrinsic) => match intrinsic {
                             Intrinsic::ApplyRangeConstraint | Intrinsic::AssertConstant => {
@@ -202,7 +209,10 @@ impl DependencyContext {
                             | Intrinsic::FieldLessThan => {
                                 // Record all the function arguments as parents of the results
                                 for result in results {
-                                    self.value_parents.entry(result).or_default().extend(&arguments);
+                                    self.value_parents
+                                        .entry(result)
+                                        .or_default()
+                                        .extend(&arguments);
                                 }
                             }
                         },
@@ -217,15 +227,16 @@ impl DependencyContext {
                                         HashSet::from_iter(results),
                                     ),
                                 );
-                                self.brillig_names.insert(
-                                    *instruction,
-                                    all_functions[&callee].name().into()
-                                );
+                                self.brillig_names
+                                    .insert(*instruction, all_functions[&callee].name().into());
                             }
                             RuntimeType::Acir(..) => {
                                 // Record all the function arguments as parents of the results
                                 for result in results {
-                                    self.value_parents.entry(result).or_default().extend(&arguments);
+                                    self.value_parents
+                                        .entry(result)
+                                        .or_default()
+                                        .extend(&arguments);
                                 }
                             }
                         },
@@ -287,9 +298,11 @@ impl DependencyContext {
                     continue;
                 }
                 // If there is at least one value among the brillig call arguments
+                // (or there are no non-constant arguments, which could happen with optimization)
                 // along with all the results featuring in the constrain value ancestors,
                 // consider the call properly covered
-                if constrain_ancestors.intersection(&brillig_values.0).next().is_some()
+                if (constrain_ancestors.intersection(&brillig_values.0).next().is_some()
+                    || !&brillig_values.0.is_empty())
                     && constrain_ancestors.is_superset(&brillig_values.1)
                 {
                     trace!(
@@ -311,17 +324,15 @@ impl DependencyContext {
         let unchecked_calls =
             self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
 
-        let unchecked: Vec<_> = unchecked_calls.map(|brillig_call| {
-            self.brillig_values.get(brillig_call)
-        }).collect();
-        
+        let unchecked: Vec<_> =
+            unchecked_calls.map(|brillig_call| self.brillig_values.get(brillig_call)).collect();
+
         let unchecked_calls =
             self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
 
-        let unchecked_names: Vec<_> = unchecked_calls.map(|brillig_call| {
-            self.brillig_names.get(brillig_call)
-        }).collect();
-        
+        let unchecked_names: Vec<_> =
+            unchecked_calls.map(|brillig_call| self.brillig_names.get(brillig_call)).collect();
+
         let unchecked_calls =
             self.brillig_values.keys().filter(|v| !covered_brillig_calls.contains(v));
 
@@ -334,7 +345,10 @@ impl DependencyContext {
             .collect();
 
         if !warnings.is_empty() {
-            println!("function {} generated warnings for calls {:?}: {:?}", function, unchecked_names, unchecked)
+            println!(
+                "function {} generated warnings for calls {:?}: {:?}",
+                function, unchecked_names, unchecked
+            )
         }
 
         trace!("making following reports for function {}: {:?}", function.name(), warnings);
