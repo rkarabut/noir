@@ -172,11 +172,12 @@ impl DependencyContext {
                     self.constrained_values.push(vec![function.dfg.resolve(*value)]);
                 }
                 Instruction::Call { func: func_id, arguments } => {
+                    let arguments: Vec<_> = arguments.iter().filter(|v| function.dfg.get_numeric_constant(**v).is_none()).copied().collect();
                     match &function.dfg[*func_id] {
                         Value::Intrinsic(intrinsic) => match intrinsic {
                             Intrinsic::ApplyRangeConstraint | Intrinsic::AssertConstant => {
                                 // Consider these intrinsic arguments constrained
-                                self.constrained_values.push(arguments.clone());
+                                self.constrained_values.push(arguments);
                             }
                             Intrinsic::AsWitness | Intrinsic::IsUnconstrained => {
                                 // These intrinsics won't affect the dependency graph
@@ -201,7 +202,7 @@ impl DependencyContext {
                             | Intrinsic::FieldLessThan => {
                                 // Record all the function arguments as parents of the results
                                 for result in results {
-                                    self.value_parents.entry(result).or_default().extend(arguments);
+                                    self.value_parents.entry(result).or_default().extend(&arguments);
                                 }
                             }
                         },
@@ -224,7 +225,7 @@ impl DependencyContext {
                             RuntimeType::Acir(..) => {
                                 // Record all the function arguments as parents of the results
                                 for result in results {
-                                    self.value_parents.entry(result).or_default().extend(arguments);
+                                    self.value_parents.entry(result).or_default().extend(&arguments);
                                 }
                             }
                         },
